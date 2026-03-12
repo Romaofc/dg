@@ -92,7 +92,6 @@ Write-Host "Processador:" $cpu.Name
 $ram = Get-CimInstance Win32_PhysicalMemory
 $ramTotal = [math]::Round(($ram.Capacity | Measure-Object -Sum).Sum / 1GB,2)
 $ramVelocidade = $ram[0].Speed
-$slotsUsados = $ram.Count
 
 $ramTipo = $ram[0].SMBIOSMemoryType
 
@@ -106,7 +105,6 @@ default {$ramTipo = "Desconhecido"}
 Write-Host "Memória RAM total:" $ramTotal "GB"
 Write-Host "Tipo da RAM:" $ramTipo
 Write-Host "Velocidade da RAM:" $ramVelocidade "MHz"
-Write-Host "Slots de RAM usados:" $slotsUsados
 Write-Host ""
 
 # GPU (prioriza dedicada)
