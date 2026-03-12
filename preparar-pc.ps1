@@ -1,5 +1,5 @@
 Write-Host "====================================="
-Write-Host "        FERRAMENTA DE SUPORTE"
+Write-Host "        FERRAMENTAS Medisystems"
 Write-Host "====================================="
 Write-Host ""
 Write-Host "1 - Preparar PC"
