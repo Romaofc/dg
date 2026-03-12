@@ -13,18 +13,16 @@ if ($opcao -eq "1") {
 
 Write-Host ""
 Write-Host "====================================="
-Write-Host "      PREPARAÇÃO DO PC"
+Write-Host "        PREPARAÇÃO DO PC"
 Write-Host "====================================="
 Write-Host ""
 
-# Ativar administrador
 Write-Host "Ativando usuario Administrador..."
 net user Administrador /active:yes
 net localgroup Administrators Administrador /add
 Write-Host "Administrador ativado."
 Write-Host ""
 
-# Selecionar pasta de instaladores
 Add-Type -AssemblyName System.Windows.Forms
 $folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
 $folderBrowser.Description = "Selecione a pasta onde estão os instaladores"
@@ -69,7 +67,7 @@ Write-Host "Processo finalizado."
 
 }
 
-# OPÇÃO 2 - ESPECIFICAÇÕES DO SISTEMA
+# OPÇÃO 2 - ESPECIFICAÇÕES
 elseif ($opcao -eq "2") {
 
 Write-Host ""
@@ -86,14 +84,16 @@ Write-Host "Versão do Windows:" $os.Version
 Write-Host "Arquitetura:" $os.OSArchitecture
 Write-Host ""
 
-# HARDWARE
+# CPU
 $cpu = Get-CimInstance Win32_Processor
+Write-Host "Processador:" $cpu.Name
+
+# RAM
 $ram = Get-CimInstance Win32_PhysicalMemory
 $ramTotal = [math]::Round(($ram.Capacity | Measure-Object -Sum).Sum / 1GB,2)
 $ramVelocidade = $ram[0].Speed
 $slotsUsados = $ram.Count
 
-# Tipo de RAM (simplificado)
 $ramTipo = $ram[0].SMBIOSMemoryType
 
 switch ($ramTipo) {
@@ -103,38 +103,41 @@ switch ($ramTipo) {
 default {$ramTipo = "Desconhecido"}
 }
 
-Write-Host "Processador:" $cpu.Name
 Write-Host "Memória RAM total:" $ramTotal "GB"
 Write-Host "Tipo da RAM:" $ramTipo
 Write-Host "Velocidade da RAM:" $ramVelocidade "MHz"
 Write-Host "Slots de RAM usados:" $slotsUsados
 Write-Host ""
 
-# GPU
-$gpu = Get-CimInstance Win32_VideoController
-Write-Host "Placa de vídeo:" $gpu[0].Name
+# GPU (prioriza dedicada)
+$gpus = Get-CimInstance Win32_VideoController
+
+$gpuDedicada = $gpus | Where-Object {
+$_.Name -match "NVIDIA|AMD|Radeon"
+}
+
+if ($gpuDedicada) {
+Write-Host "Placa de vídeo:" $gpuDedicada.Name
+}
+else {
+Write-Host "Placa de vídeo:" $gpus[0].Name
+}
+
 Write-Host ""
 
-# DISCOS
+# DISCOS FÍSICOS
 $discos = Get-PhysicalDisk
+
 Write-Host "Quantidade de discos:" $discos.Count
 Write-Host ""
 
-$volumes = Get-Volume | Where-Object {$_.DriveType -eq "Fixed"}
+foreach ($disco in $discos) {
 
-foreach ($volume in $volumes) {
+$tamanho = [math]::Round($disco.Size / 1GB,2)
 
-$total = [math]::Round($volume.Size / 1GB,2)
-$livre = [math]::Round($volume.SizeRemaining / 1GB,2)
-$usado = [math]::Round((($volume.Size - $volume.SizeRemaining) / $volume.Size) * 100,2)
-
-$tipo = ($discos | Select-Object -First 1).MediaType
-
-Write-Host "Disco:" $volume.DriveLetter
-Write-Host "Tipo:" $tipo
-Write-Host "Espaço total:" $total "GB"
-Write-Host "Espaço livre:" $livre "GB"
-Write-Host "Porcentagem usada:" $usado "%"
+Write-Host "Disco:" $disco.FriendlyName
+Write-Host "Tipo:" $disco.MediaType
+Write-Host "Tamanho total:" $tamanho "GB"
 Write-Host ""
 
 }
