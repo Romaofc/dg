@@ -79,6 +79,9 @@ elseif ($opcao -eq "2") {
     Write-Host ""
 
     # SISTEMA
+    Write-Host "Nome do dispositivo:" -ForegroundColor Yellow -NoNewline
+    Write-Host " $nomePC" -ForegroundColor White
+    Write-Host ""
     $os = Get-CimInstance Win32_OperatingSystem
     Write-Host "SISTEMA" -ForegroundColor Cyan
     Write-Host ""
