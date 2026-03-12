@@ -7,6 +7,7 @@ Write-Host ""
 Write-Host "1 - Preparar PC" -ForegroundColor Yellow
 Write-Host "2 - Especificações do sistema" -ForegroundColor Yellow
 Write-Host "3 - Backup do usuário" -ForegroundColor Yellow
+Write-Host "4 - Restaurar backup" -ForegroundColor Yellow
 Write-Host ""
 
 $opcao = Read-Host "Escolha uma opção"
@@ -14,7 +15,6 @@ $opcao = Read-Host "Escolha uma opção"
 # ================================
 # OPÇÃO 1 - PREPARAR PC
 # ================================
-
 if ($opcao -eq "1") {
 
     Clear-Host
@@ -34,7 +34,6 @@ if ($opcao -eq "1") {
     $folderBrowser.Description = "Selecione a pasta com os instaladores"
 
     if ($folderBrowser.ShowDialog() -eq "OK") {
-
         $pasta = $folderBrowser.SelectedPath
         Write-Host ""
         Write-Host "Pasta selecionada:" -ForegroundColor Yellow -NoNewline
@@ -69,7 +68,6 @@ if ($opcao -eq "1") {
 # ================================
 # OPÇÃO 2 - ESPECIFICAÇÕES
 # ================================
-
 elseif ($opcao -eq "2") {
 
     Clear-Host
@@ -78,13 +76,13 @@ elseif ($opcao -eq "2") {
     Write-Host "=====================================" -ForegroundColor DarkGray
     Write-Host ""
 
-    # SISTEMA
-    Write-Host "Nome do dispositivo:" -ForegroundColor Yellow -NoNewline
-    Write-Host " $nomePC" -ForegroundColor White
-    Write-Host ""
+    $nomePC = $env:COMPUTERNAME
     $os = Get-CimInstance Win32_OperatingSystem
+
     Write-Host "SISTEMA" -ForegroundColor Cyan
     Write-Host ""
+    Write-Host "Nome do dispositivo:" -ForegroundColor Yellow -NoNewline
+    Write-Host " $nomePC" -ForegroundColor White
     Write-Host "Sistema operacional:" -ForegroundColor Yellow -NoNewline
     Write-Host " $($os.Caption)" -ForegroundColor White
     Write-Host "Versão do Windows:" -ForegroundColor Yellow -NoNewline
@@ -93,7 +91,6 @@ elseif ($opcao -eq "2") {
     Write-Host " $($os.OSArchitecture)" -ForegroundColor White
     Write-Host ""
 
-    # CPU e RAM
     $cpu = Get-CimInstance Win32_Processor
     Write-Host "HARDWARE" -ForegroundColor Cyan
     Write-Host ""
@@ -109,7 +106,6 @@ elseif ($opcao -eq "2") {
     Write-Host " $ramVelocidade MHz" -ForegroundColor White
     Write-Host ""
 
-    # GPU
     $gpus = Get-CimInstance Win32_VideoController
     $gpuDedicada = $gpus | Where-Object { $_.Name -match "NVIDIA|AMD|Radeon" }
     Write-Host "GRÁFICO" -ForegroundColor Cyan
@@ -123,14 +119,12 @@ elseif ($opcao -eq "2") {
     }
     Write-Host ""
 
-    # DISCOS
     $discos = Get-PhysicalDisk
     Write-Host "ARMAZENAMENTO" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Quantidade de discos:" -ForegroundColor Yellow -NoNewline
     Write-Host " $($discos.Count)" -ForegroundColor White
     Write-Host ""
-
     foreach ($disco in $discos) {
         $tamanho = [math]::Round($disco.Size / 1GB,2)
         Write-Host "Disco:" -ForegroundColor Yellow -NoNewline
@@ -146,7 +140,6 @@ elseif ($opcao -eq "2") {
 # ================================
 # OPÇÃO 3 - BACKUP
 # ================================
-
 elseif ($opcao -eq "3") {
 
     Clear-Host
@@ -179,7 +172,6 @@ elseif ($opcao -eq "3") {
             $destino = Join-Path $destinoBackup $pasta
 
             if (Test-Path $origem) {
-
                 if (!(Test-Path $destino)) { New-Item -ItemType Directory -Path $destino | Out-Null }
 
                 $arquivos = Get-ChildItem $origem -Recurse -Force
@@ -189,7 +181,6 @@ elseif ($opcao -eq "3") {
                 foreach ($arquivo in $arquivos) {
                     $destinoArquivo = Join-Path $destino ($arquivo.FullName.Substring($origem.Length + 1))
                     $destinoDir = Split-Path $destinoArquivo
-
                     if (!(Test-Path $destinoDir)) { New-Item -ItemType Directory -Path $destinoDir | Out-Null }
 
                     Copy-Item $arquivo.FullName $destinoArquivo -Force
@@ -198,7 +189,6 @@ elseif ($opcao -eq "3") {
                     $percent = [int](($arquivoContador / $totalArquivos) * 100)
                     Write-Progress -Activity "Copiando $pasta" -Status "$percent% concluído" -PercentComplete $percent
                 }
-
             }
         }
 
@@ -209,7 +199,58 @@ elseif ($opcao -eq "3") {
     } else {
         Write-Host "Nenhuma pasta selecionada." -ForegroundColor Red
     }
+}
 
+# ================================
+# OPÇÃO 4 - RESTAURAR BACKUP
+# ================================
+elseif ($opcao -eq "4") {
+
+    Clear-Host
+    Write-Host "=====================================" -ForegroundColor DarkGray
+    Write-Host "       RESTAURAR BACKUP DO USUÁRIO" -ForegroundColor Cyan
+    Write-Host "=====================================" -ForegroundColor DarkGray
+    Write-Host ""
+
+    Add-Type -AssemblyName System.Windows.Forms
+    $folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
+    $folderBrowser.Description = "Selecione a pasta do backup para restaurar"
+
+    if ($folderBrowser.ShowDialog() -eq "OK") {
+
+        $backupPath = $folderBrowser.SelectedPath
+        $pastas = Get-ChildItem -Path $backupPath | Where-Object {$_.PSIsContainer}
+
+        foreach ($pasta in $pastas) {
+            $origem = $pasta.FullName
+            $destino = Join-Path $env:USERPROFILE $pasta.Name
+
+            if (!(Test-Path $destino)) { New-Item -ItemType Directory -Path $destino | Out-Null }
+
+            $arquivos = Get-ChildItem $origem -Recurse -Force
+            $totalArquivos = $arquivos.Count
+            $arquivoContador = 0
+
+            foreach ($arquivo in $arquivos) {
+                $destinoArquivo = Join-Path $destino ($arquivo.FullName.Substring($origem.Length + 1))
+                $destinoDir = Split-Path $destinoArquivo
+                if (!(Test-Path $destinoDir)) { New-Item -ItemType Directory -Path $destinoDir | Out-Null }
+
+                Copy-Item $arquivo.FullName $destinoArquivo -Force
+
+                $arquivoContador++
+                $percent = [int](($arquivoContador / $totalArquivos) * 100)
+                Write-Progress -Activity "Restaurando $($pasta.Name)" -Status "$percent% concluído" -PercentComplete $percent
+            }
+        }
+
+        Write-Progress -Activity "Restauração concluída" -Completed
+        Write-Host ""
+        Write-Host "Backup restaurado com sucesso!" -ForegroundColor Green
+
+    } else {
+        Write-Host "Nenhuma pasta selecionada." -ForegroundColor Red
+    }
 }
 
 else {
