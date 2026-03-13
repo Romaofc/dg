@@ -16,25 +16,6 @@ Write-Host ""
 
 $opcao = Read-Host "Escolha uma opção"
 
-function Get-InstalledPrograms {
-
-$paths = @(
-"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
-"HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
-)
-
-$programas = foreach ($path in $paths) {
-
-Get-ItemProperty $path -ErrorAction SilentlyContinue |
-Where-Object {$_.DisplayName} |
-Select-Object -ExpandProperty DisplayName
-
-}
-
-return $programas
-
-}
-
 # ====================================
 # OPÇÃO 1 - PREPARAR PC
 # ====================================
@@ -64,10 +45,22 @@ foreach ($arquivo in $arquivos) {
 
 $nomePrograma = [System.IO.Path]::GetFileNameWithoutExtension($arquivo.Name)
 
-if ($arquivo.Name -like "setup.exe") {
+# detectar instalador do Office
+if ($arquivo.Name -eq "setup.exe") {
 
-Write-Host "Instalador do Office detectado - ignorado" -ForegroundColor DarkYellow
+$pastaOffice = Split-Path $arquivo.FullName
+$config = Join-Path $pastaOffice "configuration.xml"
+
+if (Test-Path $config) {
+
+Write-Host "Iniciando instalação do Office..." -ForegroundColor Yellow
+
+$p = Start-Process $arquivo.FullName -ArgumentList "/configure `"$config`"" -PassThru
+
+$processos += $p
 continue
+
+}
 
 }
 
@@ -103,7 +96,7 @@ Write-Host "Aguardando todas as instalações terminarem..." -ForegroundColor Cy
 $processos | Wait-Process
 
 Write-Host ""
-Write-Host "Instalações concluídas." -ForegroundColor Green
+Write-Host "Todas as instalações concluídas." -ForegroundColor Green
 
 }
 
@@ -122,7 +115,7 @@ Pause
 }
 
 # ====================================
-# OPÇÃO 2 - ESPECIFICAÇÕES DO SISTEMA
+# OPÇÃO 2 - ESPECIFICAÇÕES
 # ====================================
 
 elseif ($opcao -eq "2") {
@@ -136,7 +129,6 @@ $ram = Get-CimInstance Win32_PhysicalMemory
 $gpu = Get-CimInstance Win32_VideoController
 
 Write-Host "========== SISTEMA ==========" -ForegroundColor Cyan
-
 Write-Host "Nome do dispositivo: $nome"
 Write-Host "Sistema operacional: $($os.Caption)"
 Write-Host "Versão do Windows: $($os.Version)"
@@ -149,20 +141,14 @@ $ramTotal = [math]::Round(($os.TotalVisibleMemorySize/1MB),2)
 
 Write-Host "Processador: $($cpu.Name)"
 Write-Host "Memória RAM total: $ramTotal GB"
-Write-Host "Tipo da RAM: $($ram[0].SMBIOSMemoryType)"
 Write-Host "Velocidade da RAM: $($ram[0].Speed) MHz"
 
 Write-Host ""
 Write-Host "========== GRÁFICO ==========" -ForegroundColor Cyan
-
 Write-Host "Placa de vídeo: $($gpu[0].Name)"
 
 Write-Host ""
 Write-Host "========== ARMAZENAMENTO ==========" -ForegroundColor Cyan
-
-$discos = Get-PhysicalDisk | Where-Object MediaType -ne "Unspecified"
-
-Write-Host "Quantidade de discos: $($discos.Count)"
 
 $volumes = Get-Volume | Where-Object {$_.DriveLetter}
 
