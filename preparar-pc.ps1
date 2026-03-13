@@ -3,20 +3,19 @@ Clear-Host
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
 
 Write-Host "=====================================" -ForegroundColor DarkGray
-Write-Host "        DG TOOLKIT - SISTEMA" -ForegroundColor Cyan
+Write-Host "           DG TOOLKIT" -ForegroundColor Cyan
 Write-Host "=====================================" -ForegroundColor DarkGray
 Write-Host ""
 
-Write-Host "1 - Preparar PC" -ForegroundColor Yellow
-Write-Host "2 - Especificações do sistema" -ForegroundColor Yellow
-Write-Host "3 - Fazer backup do usuário" -ForegroundColor Yellow
-Write-Host "4 - Restaurar backup" -ForegroundColor Yellow
-Write-Host "5 - Atualizar Windows para Pro" -ForegroundColor Yellow
+Write-Host "1 - Preparar PC"
+Write-Host "2 - Especificações do sistema"
+Write-Host "3 - Fazer backup do usuário"
+Write-Host "4 - Restaurar backup"
+Write-Host "5 - Atualizar Windows para Pro"
 Write-Host ""
 
 $opcao = Read-Host "Escolha uma opção"
 
-# FUNÇÃO PARA DETECTAR PROGRAMAS INSTALADOS
 function Get-InstalledPrograms {
 
 $paths = @(
@@ -36,20 +35,17 @@ return $programas
 
 }
 
-# =============================
+# ====================================
 # OPÇÃO 1 - PREPARAR PC
-# =============================
+# ====================================
 
 if ($opcao -eq "1") {
 
 Write-Host ""
 Write-Host "Preparando o PC..." -ForegroundColor Cyan
-Write-Host ""
 
 net user Administrador /active:yes
 net localgroup Administradores Administrador /add
-
-$programasInstalados = Get-InstalledPrograms
 
 Add-Type -AssemblyName System.Windows.Forms
 
@@ -62,40 +58,52 @@ $pasta = $folderBrowser.SelectedPath
 
 $arquivos = Get-ChildItem $pasta -Include *.exe,*.msi -Recurse
 
-$total = $arquivos.Count
-$i = 0
+$processos = @()
 
 foreach ($arquivo in $arquivos) {
 
-$i++
-$percent = [int](($i / $total) * 100)
-
 $nomePrograma = [System.IO.Path]::GetFileNameWithoutExtension($arquivo.Name)
 
-if ($programasInstalados -like "*$nomePrograma*") {
+if ($arquivo.Name -like "setup.exe") {
 
-Write-Host "$nomePrograma já instalado [$percent%]" -ForegroundColor Green
+Write-Host "Instalador do Office detectado - ignorado" -ForegroundColor DarkYellow
 continue
 
 }
 
-Write-Host "Instalando $nomePrograma [$percent%]" -ForegroundColor Yellow
+Write-Host "Iniciando instalação de $nomePrograma..." -ForegroundColor Yellow
+
+try {
 
 if ($arquivo.Extension -eq ".msi") {
 
-Start-Process "msiexec.exe" -ArgumentList "/i `"$($arquivo.FullName)`" /qn /norestart" -Wait
+$p = Start-Process msiexec.exe -ArgumentList "/i `"$($arquivo.FullName)`" /qn /norestart" -PassThru
 
 }
 else {
 
-Start-Process $arquivo.FullName -ArgumentList "/S /silent /quiet /qn /norestart" -Wait
+$p = Start-Process $arquivo.FullName -ArgumentList "/S /silent /verysilent /qn /norestart" -PassThru
+
+}
+
+$processos += $p
+
+}
+catch {
+
+Write-Host "Erro ao iniciar $nomePrograma" -ForegroundColor Red
 
 }
 
 }
 
 Write-Host ""
-Write-Host "Processo de instalação finalizado." -ForegroundColor Green
+Write-Host "Aguardando todas as instalações terminarem..." -ForegroundColor Cyan
+
+$processos | Wait-Process
+
+Write-Host ""
+Write-Host "Instalações concluídas." -ForegroundColor Green
 
 }
 
@@ -113,15 +121,13 @@ Pause
 
 }
 
-# =============================
-# OPÇÃO 2 - ESPECIFICAÇÕES
-# =============================
+# ====================================
+# OPÇÃO 2 - ESPECIFICAÇÕES DO SISTEMA
+# ====================================
 
 elseif ($opcao -eq "2") {
 
 Clear-Host
-
-Write-Host "========== SISTEMA ==========" -ForegroundColor Cyan
 
 $nome = $env:COMPUTERNAME
 $os = Get-CimInstance Win32_OperatingSystem
@@ -129,9 +135,11 @@ $cpu = Get-CimInstance Win32_Processor
 $ram = Get-CimInstance Win32_PhysicalMemory
 $gpu = Get-CimInstance Win32_VideoController
 
+Write-Host "========== SISTEMA ==========" -ForegroundColor Cyan
+
 Write-Host "Nome do dispositivo: $nome"
-Write-Host "Sistema: $($os.Caption)"
-Write-Host "Versão: $($os.Version)"
+Write-Host "Sistema operacional: $($os.Caption)"
+Write-Host "Versão do Windows: $($os.Version)"
 Write-Host "Arquitetura: $($os.OSArchitecture)"
 
 Write-Host ""
@@ -140,16 +148,21 @@ Write-Host "========== HARDWARE ==========" -ForegroundColor Cyan
 $ramTotal = [math]::Round(($os.TotalVisibleMemorySize/1MB),2)
 
 Write-Host "Processador: $($cpu.Name)"
-Write-Host "Memória RAM: $ramTotal GB"
-Write-Host "Velocidade RAM: $($ram[0].Speed) MHz"
+Write-Host "Memória RAM total: $ramTotal GB"
+Write-Host "Tipo da RAM: $($ram[0].SMBIOSMemoryType)"
+Write-Host "Velocidade da RAM: $($ram[0].Speed) MHz"
 
 Write-Host ""
-Write-Host "========== GRÁFICOS ==========" -ForegroundColor Cyan
+Write-Host "========== GRÁFICO ==========" -ForegroundColor Cyan
 
-Write-Host "GPU: $($gpu[0].Name)"
+Write-Host "Placa de vídeo: $($gpu[0].Name)"
 
 Write-Host ""
 Write-Host "========== ARMAZENAMENTO ==========" -ForegroundColor Cyan
+
+$discos = Get-PhysicalDisk | Where-Object MediaType -ne "Unspecified"
+
+Write-Host "Quantidade de discos: $($discos.Count)"
 
 $volumes = Get-Volume | Where-Object {$_.DriveLetter}
 
@@ -171,9 +184,9 @@ Pause
 
 }
 
-# =============================
+# ====================================
 # OPÇÃO 3 - BACKUP
-# =============================
+# ====================================
 
 elseif ($opcao -eq "3") {
 
@@ -192,15 +205,9 @@ New-Item -ItemType Directory -Path $destino -Force
 
 $pastas = @("Desktop","Documents","Downloads","Pictures","Videos")
 
-$total = $pastas.Count
-$i = 0
-
 foreach ($pasta in $pastas) {
 
-$i++
-$percent = [int](($i / $total) * 100)
-
-Write-Host "Copiando $pasta [$percent%]" -ForegroundColor Yellow
+Write-Host "Copiando $pasta..." -ForegroundColor Yellow
 
 $origem = "$env:USERPROFILE\$pasta"
 $dest = "$destino\$pasta"
@@ -222,9 +229,9 @@ Pause
 
 }
 
-# =============================
+# ====================================
 # OPÇÃO 4 - RESTAURAR BACKUP
-# =============================
+# ====================================
 
 elseif ($opcao -eq "4") {
 
@@ -239,15 +246,9 @@ $backup = $folderBrowser.SelectedPath
 
 $pastas = Get-ChildItem $backup -Directory
 
-$total = $pastas.Count
-$i = 0
-
 foreach ($pasta in $pastas) {
 
-$i++
-$percent = [int](($i / $total) * 100)
-
-Write-Host "Restaurando $($pasta.Name) [$percent%]" -ForegroundColor Yellow
+Write-Host "Restaurando $($pasta.Name)..." -ForegroundColor Yellow
 
 $destino = "$env:USERPROFILE\$($pasta.Name)"
 
@@ -264,36 +265,33 @@ Pause
 
 }
 
-# =============================
-# OPÇÃO 5 - WINDOWS PRO
-# =============================
+# ====================================
+# OPÇÃO 5 - UPGRADE PARA PRO
+# ====================================
 
 elseif ($opcao -eq "5") {
 
 Clear-Host
 
-Write-Host "Atualização para Windows Pro" -ForegroundColor Cyan
-
 $os = Get-CimInstance Win32_OperatingSystem
-$versao = $os.Caption
 
-Write-Host "Sistema atual: $versao"
+Write-Host "Sistema atual: $($os.Caption)"
 
-if ($versao -match "Pro") {
+if ($os.Caption -match "Pro") {
 
 Write-Host "O Windows já é Pro." -ForegroundColor Green
 
 }
-elseif ($versao -match "Home") {
+elseif ($os.Caption -match "Home") {
 
-Write-Host "Iniciando upgrade..." -ForegroundColor Yellow
+Write-Host "Iniciando upgrade para Pro..." -ForegroundColor Yellow
 
 changepk.exe /ProductKey VK7JG-NPHTM-C97JM-9MPGT-3V66T
 
 }
 else {
 
-Write-Host "Versão do Windows não identificada." -ForegroundColor Red
+Write-Host "Versão não identificada." -ForegroundColor Red
 
 }
 
