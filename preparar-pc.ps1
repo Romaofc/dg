@@ -1,5 +1,7 @@
 Clear-Host
 
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+
 Write-Host "=====================================" -ForegroundColor DarkGray
 Write-Host "        DG TOOLKIT - SISTEMA" -ForegroundColor Cyan
 Write-Host "=====================================" -ForegroundColor DarkGray
@@ -16,21 +18,27 @@ $opcao = Read-Host "Escolha uma opção"
 
 # FUNÇÃO PARA DETECTAR PROGRAMAS INSTALADOS
 function Get-InstalledPrograms {
-    $paths = @(
-        "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
-        "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
-    )
 
-    $programas = foreach ($path in $paths) {
-        Get-ItemProperty $path -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName} | Select-Object -ExpandProperty DisplayName
-    }
+$paths = @(
+"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+"HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
 
-    return $programas
+$programas = foreach ($path in $paths) {
+
+Get-ItemProperty $path -ErrorAction SilentlyContinue |
+Where-Object {$_.DisplayName} |
+Select-Object -ExpandProperty DisplayName
+
 }
 
-# =========================================
+return $programas
+
+}
+
+# =============================
 # OPÇÃO 1 - PREPARAR PC
-# =========================================
+# =============================
 
 if ($opcao -eq "1") {
 
@@ -39,18 +47,20 @@ Write-Host "Preparando o PC..." -ForegroundColor Cyan
 Write-Host ""
 
 net user Administrador /active:yes
-net localgroup Administrators Administrador /add
+net localgroup Administradores Administrador /add
 
 $programasInstalados = Get-InstalledPrograms
 
 Add-Type -AssemblyName System.Windows.Forms
+
 $folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
-$folderBrowser.Description = "Selecione a pasta onde estão os instaladores"
+$folderBrowser.Description = "Selecione a pasta dos instaladores"
 
 if ($folderBrowser.ShowDialog() -eq "OK") {
 
 $pasta = $folderBrowser.SelectedPath
-$arquivos = Get-ChildItem $pasta -Include *.exe,*.msi
+
+$arquivos = Get-ChildItem $pasta -Include *.exe,*.msi -Recurse
 
 $total = $arquivos.Count
 $i = 0
@@ -59,11 +69,12 @@ foreach ($arquivo in $arquivos) {
 
 $i++
 $percent = [int](($i / $total) * 100)
+
 $nomePrograma = [System.IO.Path]::GetFileNameWithoutExtension($arquivo.Name)
 
-if ($programasInstalados -match $nomePrograma) {
+if ($programasInstalados -like "*$nomePrograma*") {
 
-Write-Host "$nomePrograma já está instalado [$percent%]" -ForegroundColor Green
+Write-Host "$nomePrograma já instalado [$percent%]" -ForegroundColor Green
 continue
 
 }
@@ -77,7 +88,7 @@ Start-Process "msiexec.exe" -ArgumentList "/i `"$($arquivo.FullName)`" /qn /nore
 }
 else {
 
-Start-Process $arquivo.FullName -ArgumentList "/S /silent /quiet /qn" -Wait
+Start-Process $arquivo.FullName -ArgumentList "/S /silent /quiet /qn /norestart" -Wait
 
 }
 
@@ -87,26 +98,24 @@ Write-Host ""
 Write-Host "Processo de instalação finalizado." -ForegroundColor Green
 
 }
-else {
-
-Write-Host "Nenhuma pasta selecionada." -ForegroundColor Red
-
-}
 
 Write-Host ""
 Write-Host "Executando Windows Update..." -ForegroundColor Cyan
 
-Install-PackageProvider -Name NuGet -Force
-Install-Module PSWindowsUpdate -Force
-Import-Module PSWindowsUpdate
+Install-PackageProvider -Name NuGet -Force -ErrorAction SilentlyContinue
+Install-Module PSWindowsUpdate -Force -ErrorAction SilentlyContinue
 
-Install-WindowsUpdate -AcceptAll -AutoReboot
+Import-Module PSWindowsUpdate -ErrorAction SilentlyContinue
+
+Install-WindowsUpdate -AcceptAll -AutoReboot -ErrorAction SilentlyContinue
+
+Pause
 
 }
 
-# =========================================
+# =============================
 # OPÇÃO 2 - ESPECIFICAÇÕES
-# =========================================
+# =============================
 
 elseif ($opcao -eq "2") {
 
@@ -121,8 +130,8 @@ $ram = Get-CimInstance Win32_PhysicalMemory
 $gpu = Get-CimInstance Win32_VideoController
 
 Write-Host "Nome do dispositivo: $nome"
-Write-Host "Sistema operacional: $($os.Caption)"
-Write-Host "Versão do Windows: $($os.Version)"
+Write-Host "Sistema: $($os.Caption)"
+Write-Host "Versão: $($os.Version)"
 Write-Host "Arquitetura: $($os.OSArchitecture)"
 
 Write-Host ""
@@ -131,32 +140,18 @@ Write-Host "========== HARDWARE ==========" -ForegroundColor Cyan
 $ramTotal = [math]::Round(($os.TotalVisibleMemorySize/1MB),2)
 
 Write-Host "Processador: $($cpu.Name)"
-Write-Host "Memória RAM total: $ramTotal GB"
-
-$ramTipo = switch ($ram[0].SMBIOSMemoryType) {
-20 {"DDR"}
-21 {"DDR2"}
-24 {"DDR3"}
-26 {"DDR4"}
-34 {"DDR5"}
-default {"Desconhecido"}
-}
-
-Write-Host "Tipo da RAM: $ramTipo"
-Write-Host "Velocidade da RAM: $($ram[0].Speed) MHz"
+Write-Host "Memória RAM: $ramTotal GB"
+Write-Host "Velocidade RAM: $($ram[0].Speed) MHz"
 
 Write-Host ""
-Write-Host "========== GRÁFICO ==========" -ForegroundColor Cyan
+Write-Host "========== GRÁFICOS ==========" -ForegroundColor Cyan
 
-Write-Host "Placa de vídeo: $($gpu[0].Name)"
+Write-Host "GPU: $($gpu[0].Name)"
 
 Write-Host ""
 Write-Host "========== ARMAZENAMENTO ==========" -ForegroundColor Cyan
 
 $volumes = Get-Volume | Where-Object {$_.DriveLetter}
-
-Write-Host "Quantidade de discos: $($volumes.Count)"
-Write-Host ""
 
 foreach ($volume in $volumes) {
 
@@ -164,11 +159,11 @@ $total = [math]::Round($volume.Size/1GB,2)
 $livre = [math]::Round($volume.SizeRemaining/1GB,2)
 $usado = 100 - (($livre / $total) * 100)
 
-Write-Host "Disco $($volume.DriveLetter)"
-Write-Host "Espaço total: $total GB"
-Write-Host "Espaço livre: $livre GB"
-Write-Host ("Porcentagem usada: {0:N0}%" -f $usado)
 Write-Host ""
+Write-Host "Disco $($volume.DriveLetter)"
+Write-Host "Total: $total GB"
+Write-Host "Livre: $livre GB"
+Write-Host ("Uso: {0:N0}%" -f $usado)
 
 }
 
@@ -176,16 +171,16 @@ Pause
 
 }
 
-# =========================================
+# =============================
 # OPÇÃO 3 - BACKUP
-# =========================================
+# =============================
 
 elseif ($opcao -eq "3") {
 
 Add-Type -AssemblyName System.Windows.Forms
 
 $folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
-$folderBrowser.Description = "Selecione onde salvar o backup"
+$folderBrowser.Description = "Escolha onde salvar o backup"
 
 if ($folderBrowser.ShowDialog() -eq "OK") {
 
@@ -227,9 +222,9 @@ Pause
 
 }
 
-# =========================================
+# =============================
 # OPÇÃO 4 - RESTAURAR BACKUP
-# =========================================
+# =============================
 
 elseif ($opcao -eq "4") {
 
@@ -241,6 +236,7 @@ $folderBrowser.Description = "Selecione a pasta do backup"
 if ($folderBrowser.ShowDialog() -eq "OK") {
 
 $backup = $folderBrowser.SelectedPath
+
 $pastas = Get-ChildItem $backup -Directory
 
 $total = $pastas.Count
@@ -260,7 +256,7 @@ Copy-Item $pasta.FullName $destino -Recurse -Force
 }
 
 Write-Host ""
-Write-Host "Backup restaurado com sucesso." -ForegroundColor Green
+Write-Host "Backup restaurado." -ForegroundColor Green
 
 }
 
@@ -268,43 +264,36 @@ Pause
 
 }
 
-# =========================================
-# OPÇÃO 5 - UPGRADE WINDOWS
-# =========================================
+# =============================
+# OPÇÃO 5 - WINDOWS PRO
+# =============================
 
 elseif ($opcao -eq "5") {
 
 Clear-Host
 
-Write-Host "=====================================" -ForegroundColor DarkGray
-Write-Host "        ATUALIZAR WINDOWS PARA PRO" -ForegroundColor Cyan
-Write-Host "=====================================" -ForegroundColor DarkGray
-Write-Host ""
+Write-Host "Atualização para Windows Pro" -ForegroundColor Cyan
 
 $os = Get-CimInstance Win32_OperatingSystem
 $versao = $os.Caption
 
 Write-Host "Sistema atual: $versao"
-Write-Host ""
 
 if ($versao -match "Pro") {
 
-Write-Host "Este sistema já está na versão Pro." -ForegroundColor Green
+Write-Host "O Windows já é Pro." -ForegroundColor Green
 
 }
 elseif ($versao -match "Home") {
 
-Write-Host "Atualizando para Windows Pro..." -ForegroundColor Yellow
-Write-Host "O computador poderá reiniciar." -ForegroundColor Yellow
-
-Start-Sleep 3
+Write-Host "Iniciando upgrade..." -ForegroundColor Yellow
 
 changepk.exe /ProductKey VK7JG-NPHTM-C97JM-9MPGT-3V66T
 
 }
 else {
 
-Write-Host "Não foi possível determinar a versão do Windows." -ForegroundColor Red
+Write-Host "Versão do Windows não identificada." -ForegroundColor Red
 
 }
 
