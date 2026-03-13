@@ -14,6 +14,20 @@ Write-Host ""
 
 $opcao = Read-Host "Escolha uma opção"
 
+# FUNÇÃO PARA DETECTAR PROGRAMAS INSTALADOS
+function Get-InstalledPrograms {
+    $paths = @(
+        "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+
+    $programas = foreach ($path in $paths) {
+        Get-ItemProperty $path -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName} | Select-Object -ExpandProperty DisplayName
+    }
+
+    return $programas
+}
+
 # =========================================
 # OPÇÃO 1 - PREPARAR PC
 # =========================================
@@ -27,6 +41,8 @@ Write-Host ""
 net user Administrador /active:yes
 net localgroup Administrators Administrador /add
 
+$programasInstalados = Get-InstalledPrograms
+
 Add-Type -AssemblyName System.Windows.Forms
 $folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
 $folderBrowser.Description = "Selecione a pasta onde estão os instaladores"
@@ -34,7 +50,7 @@ $folderBrowser.Description = "Selecione a pasta onde estão os instaladores"
 if ($folderBrowser.ShowDialog() -eq "OK") {
 
 $pasta = $folderBrowser.SelectedPath
-$arquivos = Get-ChildItem $pasta -Filter *.exe
+$arquivos = Get-ChildItem $pasta -Include *.exe,*.msi
 
 $total = $arquivos.Count
 $i = 0
@@ -42,17 +58,33 @@ $i = 0
 foreach ($arquivo in $arquivos) {
 
 $i++
+$percent = [int](($i / $total) * 100)
+$nomePrograma = [System.IO.Path]::GetFileNameWithoutExtension($arquivo.Name)
 
-Write-Progress -Activity "Instalando programas" `
--Status "$($arquivo.Name)" `
--PercentComplete (($i / $total) * 100)
+if ($programasInstalados -match $nomePrograma) {
 
-Start-Process $arquivo.FullName -Wait
+Write-Host "$nomePrograma já está instalado [$percent%]" -ForegroundColor Green
+continue
+
+}
+
+Write-Host "Instalando $nomePrograma [$percent%]" -ForegroundColor Yellow
+
+if ($arquivo.Extension -eq ".msi") {
+
+Start-Process "msiexec.exe" -ArgumentList "/i `"$($arquivo.FullName)`" /qn /norestart" -Wait
+
+}
+else {
+
+Start-Process $arquivo.FullName -ArgumentList "/S /silent /quiet /qn" -Wait
+
+}
 
 }
 
 Write-Host ""
-Write-Host "Programas instalados." -ForegroundColor Green
+Write-Host "Processo de instalação finalizado." -ForegroundColor Green
 
 }
 else {
@@ -87,8 +119,6 @@ $os = Get-CimInstance Win32_OperatingSystem
 $cpu = Get-CimInstance Win32_Processor
 $ram = Get-CimInstance Win32_PhysicalMemory
 $gpu = Get-CimInstance Win32_VideoController
-$discos = Get-PhysicalDisk
-$volumes = Get-Volume | Where-Object {$_.DriveLetter}
 
 Write-Host "Nome do dispositivo: $nome"
 Write-Host "Sistema operacional: $($os.Caption)"
@@ -123,8 +153,9 @@ Write-Host "Placa de vídeo: $($gpu[0].Name)"
 Write-Host ""
 Write-Host "========== ARMAZENAMENTO ==========" -ForegroundColor Cyan
 
-$discosFisicos = Get-Disk
-Write-Host "Quantidade de discos: $($discosFisicos.Count)"
+$volumes = Get-Volume | Where-Object {$_.DriveLetter}
+
+Write-Host "Quantidade de discos: $($volumes.Count)"
 Write-Host ""
 
 foreach ($volume in $volumes) {
@@ -133,7 +164,7 @@ $total = [math]::Round($volume.Size/1GB,2)
 $livre = [math]::Round($volume.SizeRemaining/1GB,2)
 $usado = 100 - (($livre / $total) * 100)
 
-Write-Host "Disco $($volume.DriveLetter):"
+Write-Host "Disco $($volume.DriveLetter)"
 Write-Host "Espaço total: $total GB"
 Write-Host "Espaço livre: $livre GB"
 Write-Host ("Porcentagem usada: {0:N0}%" -f $usado)
@@ -164,13 +195,7 @@ $destino = "$destinoBase\Backup-$pc"
 
 New-Item -ItemType Directory -Path $destino -Force
 
-$pastas = @(
-"Desktop",
-"Documents",
-"Downloads",
-"Pictures",
-"Videos"
-)
+$pastas = @("Desktop","Documents","Downloads","Pictures","Videos")
 
 $total = $pastas.Count
 $i = 0
@@ -178,10 +203,9 @@ $i = 0
 foreach ($pasta in $pastas) {
 
 $i++
+$percent = [int](($i / $total) * 100)
 
-Write-Progress -Activity "Fazendo backup..." `
--Status "$pasta" `
--PercentComplete (($i / $total) * 100)
+Write-Host "Copiando $pasta [$percent%]" -ForegroundColor Yellow
 
 $origem = "$env:USERPROFILE\$pasta"
 $dest = "$destino\$pasta"
@@ -225,10 +249,9 @@ $i = 0
 foreach ($pasta in $pastas) {
 
 $i++
+$percent = [int](($i / $total) * 100)
 
-Write-Progress -Activity "Restaurando backup..." `
--Status "$($pasta.Name)" `
--PercentComplete (($i / $total) * 100)
+Write-Host "Restaurando $($pasta.Name) [$percent%]" -ForegroundColor Yellow
 
 $destino = "$env:USERPROFILE\$($pasta.Name)"
 
@@ -269,7 +292,6 @@ if ($versao -match "Pro") {
 Write-Host "Este sistema já está na versão Pro." -ForegroundColor Green
 
 }
-
 elseif ($versao -match "Home") {
 
 Write-Host "Atualizando para Windows Pro..." -ForegroundColor Yellow
@@ -280,7 +302,6 @@ Start-Sleep 3
 changepk.exe /ProductKey VK7JG-NPHTM-C97JM-9MPGT-3V66T
 
 }
-
 else {
 
 Write-Host "Não foi possível determinar a versão do Windows." -ForegroundColor Red
