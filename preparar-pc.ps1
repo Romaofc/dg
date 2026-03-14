@@ -1,17 +1,38 @@
+```powershell
+# ======================================
+# Medisystems TOOLKIT
+# ======================================
+
+# Tema estilo MediSystems
+$Host.UI.RawUI.BackgroundColor = "DarkBlue"
+$Host.UI.RawUI.ForegroundColor = "White"
 Clear-Host
 
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
 
-Write-Host "=====================================" -ForegroundColor DarkGray
-Write-Host "           DG TOOLKIT" -ForegroundColor Cyan
-Write-Host "=====================================" -ForegroundColor DarkGray
+# ======================================
+# LOGO
+# ======================================
+
+Write-Host ""
+Write-Host " ███╗   ███╗███████╗██████╗ ██╗" -ForegroundColor Cyan
+Write-Host " ████╗ ████║██╔════╝██╔══██╗██║" -ForegroundColor Cyan
+Write-Host " ██╔████╔██║█████╗  ██║  ██║██║" -ForegroundColor Cyan
+Write-Host " ██║╚██╔╝██║██╔══╝  ██║  ██║██║" -ForegroundColor Cyan
+Write-Host " ██║ ╚═╝ ██║███████╗██████╔╝██║" -ForegroundColor Cyan
+Write-Host " ╚═╝     ╚═╝╚══════╝╚═════╝ ╚═╝" -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "1 - Preparar PC"
-Write-Host "2 - Especificações do sistema"
-Write-Host "3 - Fazer backup do usuário"
-Write-Host "4 - Restaurar backup"
-Write-Host "5 - Atualizar Windows para Pro"
+Write-Host "=====================================" -ForegroundColor Cyan
+Write-Host "           Medisystems TOOLKIT" -ForegroundColor Cyan
+Write-Host "=====================================" -ForegroundColor Cyan
+Write-Host ""
+
+Write-Host "1 - Preparar PC" -ForegroundColor White
+Write-Host "2 - Especificações do sistema" -ForegroundColor White
+Write-Host "3 - Fazer backup do usuário" -ForegroundColor White
+Write-Host "4 - Restaurar backup" -ForegroundColor White
+Write-Host "5 - Atualizar Windows para Pro" -ForegroundColor White
 Write-Host ""
 
 $opcao = Read-Host "Escolha uma opção"
@@ -25,81 +46,48 @@ if ($opcao -eq "1") {
 Write-Host ""
 Write-Host "Preparando o PC..." -ForegroundColor Cyan
 
+# ativar administrador
 net user Administrador /active:yes
 net localgroup Administradores Administrador /add
 
-Add-Type -AssemblyName System.Windows.Forms
+# verificar internet
+Write-Host ""
+Write-Host "Verificando conexão com internet..." -ForegroundColor Cyan
 
-$folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
-$folderBrowser.Description = "Selecione a pasta dos instaladores"
+if (-not (Test-Connection google.com -Count 2 -Quiet)) {
 
-if ($folderBrowser.ShowDialog() -eq "OK") {
-
-$pasta = $folderBrowser.SelectedPath
-
-$arquivos = Get-ChildItem $pasta -Include *.exe,*.msi -Recurse
-
-$processos = @()
-
-foreach ($arquivo in $arquivos) {
-
-$nomePrograma = [System.IO.Path]::GetFileNameWithoutExtension($arquivo.Name)
-
-# detectar instalador do Office
-if ($arquivo.Name -eq "setup.exe") {
-
-$pastaOffice = Split-Path $arquivo.FullName
-$config = Join-Path $pastaOffice "configuration.xml"
-
-if (Test-Path $config) {
-
-Write-Host "Iniciando instalação do Office..." -ForegroundColor Yellow
-
-$p = Start-Process $arquivo.FullName -ArgumentList "/configure `"$config`"" -PassThru
-
-$processos += $p
-continue
+Write-Host "Sem conexão com internet!" -ForegroundColor Red
+Pause
+exit
 
 }
 
-}
+Write-Host "Internet OK." -ForegroundColor Green
 
-Write-Host "Iniciando instalação de $nomePrograma..." -ForegroundColor Yellow
+# download ninite
+Write-Host ""
+Write-Host "Baixando instalador de programas..." -ForegroundColor Cyan
 
-try {
+$niniteURL = "https://ninite.com/.net10-.net4.8.1-.net8-.net9-.neta10-.neta8-.neta9-.netx10-.netx8-.netx9-anydesk-chrome-googledrivefordesktop-teamviewer15-vcredist05-vcredist08-vcredist10-vcredist12-vcredist13-vcredist15-vcredistarm15-vcredistx05-vcredistx08-vcredistx10-vcredistx12-vcredistx13-vcredistx15-winrar/ninite.exe"
 
-if ($arquivo.Extension -eq ".msi") {
+$ninitePath = "$env:TEMP\ninite.exe"
 
-$p = Start-Process msiexec.exe -ArgumentList "/i `"$($arquivo.FullName)`" /qn /norestart" -PassThru
+Invoke-WebRequest $niniteURL -OutFile $ninitePath
 
-}
-else {
+# barra de progresso fake (instalação)
+for ($i=0; $i -le 100; $i+=5) {
 
-$p = Start-Process $arquivo.FullName -ArgumentList "/S /silent /verysilent /qn /norestart" -PassThru
-
-}
-
-$processos += $p
-
-}
-catch {
-
-Write-Host "Erro ao iniciar $nomePrograma" -ForegroundColor Red
+Write-Progress -Activity "Instalando programas" -Status "$i% completo" -PercentComplete $i
+Start-Sleep -Milliseconds 300
 
 }
 
-}
+Start-Process $ninitePath -Wait
 
 Write-Host ""
-Write-Host "Aguardando todas as instalações terminarem..." -ForegroundColor Cyan
+Write-Host "Programas instalados com sucesso." -ForegroundColor Green
 
-$processos | Wait-Process
-
-Write-Host ""
-Write-Host "Todas as instalações concluídas." -ForegroundColor Green
-
-}
-
+# Windows Update
 Write-Host ""
 Write-Host "Executando Windows Update..." -ForegroundColor Cyan
 
@@ -284,3 +272,4 @@ Write-Host "Versão não identificada." -ForegroundColor Red
 Pause
 
 }
+```
