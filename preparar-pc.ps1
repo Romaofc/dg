@@ -14,18 +14,22 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
 # LOGO
 # ======================================
 
-Write-Host "   ╭──────────────────────────────╮" -ForegroundColor Cyan
-Write-Host "   │  ╭────────────────────────╮  │" -ForegroundColor Cyan
-Write-Host "   │  │      /\        /\      │  │" -ForegroundColor Cyan
-Write-Host "   │  │     /  \______/  \     │──┼───────────────────────────┬───┬──" -ForegroundColor Cyan
-Write-Host "   │  │    /              \    │  │                           │   │" -ForegroundColor Cyan
-Write-Host "   │  ╰────────────────────────╯  │                           │   │" -ForegroundColor Cyan
-Write-Host "   ╰───────────────┬──────────────╯                           │   │" -ForegroundColor Cyan
-Write-Host "                   │                                          │   │" -ForegroundColor Cyan
-Write-Host "                  ─┴─                                         │   │" -ForegroundColor Cyan
+Write-Host "███╗   ███╗███████╗██████╗ ██╗" -ForegroundColor Cyan
+Write-Host "████╗ ████║██╔════╝██╔══██╗██║" -ForegroundColor Cyan
+Write-Host "██╔████╔██║█████╗  ██║  ██║██║" -ForegroundColor Cyan
+Write-Host "██║╚██╔╝██║██╔══╝  ██║  ██║██║" -ForegroundColor Cyan
+Write-Host "██║ ╚═╝ ██║███████╗██████╔╝██║" -ForegroundColor Cyan
+Write-Host "╚═╝     ╚═╝╚══════╝╚═════╝ ╚═╝" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "                        MEDi" -ForegroundColor White
-Write-Host "                     S Y S T E M S" -ForegroundColor White
+
+Write-Host "  ███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗███████╗" -ForegroundColor White
+Write-Host "  ██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║██╔════╝" -ForegroundColor White
+Write-Host "  ███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║███████╗" -ForegroundColor White
+Write-Host "  ╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║╚════██║" -ForegroundColor White
+Write-Host "  ███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║███████║" -ForegroundColor White
+Write-Host "  ╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝╚══════╝" -ForegroundColor White
+
+
 
 Write-Host "=====================================" -ForegroundColor Cyan
 Write-Host "           Medisystems TOOLKIT" -ForegroundColor Cyan
