@@ -55,7 +55,7 @@ if ($opcao -eq "1") {
 
     Write-Host "`nInstalando programas..." -ForegroundColor Cyan
 
-    $niniteURL = "https://ninite.com/chrome-anydesk-teamviewer15-winrar/ninite.exe"
+    $niniteURL = "https://ninite.com/chrome-teamviewer15-winrar/ninite.exe"
     $ninitePath = "$env:TEMP\ninite.exe"
 
     Invoke-WebRequest $niniteURL -OutFile $ninitePath
