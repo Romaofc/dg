@@ -204,12 +204,12 @@ OPÇÃO 5 - ATALHOS DOS DEPARTAMENTOS
 
 elseif ($opcao -eq "5") {
 
-Write-Host "`nCriando atalhos dos Departamentos..." -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Criando atalhos dos Departamentos..." -ForegroundColor Cyan
 
-$DesktopPublico = "$env:PUBLIC\Desktop"
-$WshShell = New-Object -ComObject WScript.Shell
+    $DesktopPublico = "$env:PUBLIC\Desktop"
 
-try {
+    $WshShell = New-Object -ComObject WScript.Shell
 
     $AtalhoASN = $WshShell.CreateShortcut("$DesktopPublico\Departamentos (ASN).lnk")
     $AtalhoASN.TargetPath = "\\SVREP-ASN-001\Departamentos"
@@ -220,12 +220,6 @@ try {
     $AtalhoTAG.Save()
 
     Write-Host "Atalhos criados com sucesso!" -ForegroundColor Green
-}
-catch {
-    Write-Host "Erro ao criar atalhos!" -ForegroundColor Red
-    Write-Host $_.Exception.Message
-}
 
-Pause
-
+    Pause
 }
