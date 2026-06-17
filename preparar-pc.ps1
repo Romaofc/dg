@@ -24,7 +24,7 @@ Write-Host "2 - Especificações do sistema"
 Write-Host "3 - Backup"
 Write-Host "4 - Restaurar backup"
 Write-Host "5 - Upgrade Windows Pro"
-Write-Host ""
+Write-Host "6 - Atalhos Dos Departamentos"
 
 $opcao = Read-Host "Escolha uma opção"
 
