@@ -217,9 +217,7 @@ elseif ($opcao -eq "5") {
 }
 
 ====================================
-
 ATALHOS DOS DEPARTAMENTOS
-
 ====================================
 
 elseif ($opcao -eq "6") {
