@@ -1,18 +1,22 @@
-# ======================================
-# Medisystems TOOLKIT PRO
-# ======================================
+======================================
+
+Medisystems TOOLKIT PRO
+
+======================================
 
 $Host.UI.RawUI.BackgroundColor = "DarkBlue"
 $Host.UI.RawUI.ForegroundColor = "White"
 Clear-Host
 
 try {
-    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force -ErrorAction Stop
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force -ErrorAction Stop
 } catch {}
 
-# ======================================
-# MENU
-# ======================================
+======================================
+
+MENU
+
+======================================
 
 Write-Host "=====================================" -ForegroundColor Cyan
 Write-Host "      Medisystems TOOLKIT PRO" -ForegroundColor Cyan
@@ -23,224 +27,205 @@ Write-Host "1 - Preparar PC COMPLETO"
 Write-Host "2 - Especificações do sistema"
 Write-Host "3 - Backup"
 Write-Host "4 - Restaurar backup"
-Write-Host "5 - Upgrade Windows Pro"
-Write-Host "6 - Atalhos Dos Departamentos"
+Write-Host "5 - Criar atalhos dos Departamentos"
 
 $opcao = Read-Host "Escolha uma opção"
 
-# ====================================
-# OPÇÃO 1 - PREPARAÇÃO COMPLETA
-# ====================================
+====================================
+
+OPÇÃO 1 - PREPARAÇÃO COMPLETA
+
+====================================
 
 if ($opcao -eq "1") {
 
-    Write-Host "`nPreparando PC..." -ForegroundColor Cyan
+Write-Host "`nPreparando PC..." -ForegroundColor Cyan
 
-    # Admin
-    net user Administrator /active:yes 2>$null
-    net user Administrador /active:yes 2>$null
+net user Administrator /active:yes 2>$null
+net user Administrador /active:yes 2>$null
 
-    # Internet
-    if (-not (Test-Connection "8.8.8.8" -Count 2 -Quiet)) {
-        Write-Host "Sem internet!" -ForegroundColor Red
-        Pause
-        exit
-    }
+if (-not (Test-Connection "8.8.8.8" -Count 2 -Quiet)) {
+    Write-Host "Sem internet!" -ForegroundColor Red
+    Pause
+    exit
+}
 
-    Write-Host "Internet OK" -ForegroundColor Green
+Write-Host "Internet OK" -ForegroundColor Green
 
-    # ====================================
-    # PROGRAMAS (NINITE)
-    # ====================================
+Write-Host "`nInstalando programas..." -ForegroundColor Cyan
 
-    Write-Host "`nInstalando programas..." -ForegroundColor Cyan
+$niniteURL = "https://ninite.com/chrome-teamviewer15-winrar/ninite.exe"
+$ninitePath = "$env:TEMP\ninite.exe"
 
-    $niniteURL = "https://ninite.com/chrome-teamviewer15-winrar/ninite.exe"
-    $ninitePath = "$env:TEMP\ninite.exe"
+Invoke-WebRequest $niniteURL -OutFile $ninitePath
+Start-Process $ninitePath -Wait
 
-    Invoke-WebRequest $niniteURL -OutFile $ninitePath
-    Start-Process $ninitePath -Wait
+Write-Host "Programas instalados!" -ForegroundColor Green
 
-    Write-Host "Programas instalados!" -ForegroundColor Green
+Write-Host "`nInstalando Microsoft 365..." -ForegroundColor Cyan
 
-    # ====================================
-    # MICROSOFT 365
-    # ====================================
+$odtUrl = "https://officecdn.microsoft.com/pr/wsus/setup.exe"
+$odtPath = "$env:TEMP\office_setup.exe"
 
-    Write-Host "`nInstalando Microsoft 365..." -ForegroundColor Cyan
+Invoke-WebRequest $odtUrl -OutFile $odtPath
 
-    $odtUrl = "https://officecdn.microsoft.com/pr/wsus/setup.exe"
-    $odtPath = "$env:TEMP\office_setup.exe"
-
-    Invoke-WebRequest $odtUrl -OutFile $odtPath
-
-    $configXml = "$env:TEMP\config.xml"
+$configXml = "$env:TEMP\config.xml"
 
 @"
 <Configuration>
-  <Add OfficeClientEdition="64" Channel="Current">
-    <Product ID="O365ProPlusRetail">
-      <Language ID="pt-br" />
-    </Product>
-  </Add>
-  <Display Level="None" AcceptEULA="TRUE" />
+<Add OfficeClientEdition="64" Channel="Current">
+<Product ID="O365ProPlusRetail">
+<Language ID="pt-br" />
+</Product>
+</Add>
+<Display Level="None" AcceptEULA="TRUE" />
 </Configuration>
 "@ | Out-File -Encoding UTF8 $configXml
 
-    Start-Process $odtPath -ArgumentList "/configure $configXml" -Wait
+Start-Process $odtPath -ArgumentList "/configure $configXml" -Wait
 
-    Write-Host "Microsoft 365 instalado!" -ForegroundColor Green
+Write-Host "Microsoft 365 instalado!" -ForegroundColor Green
 
-    # ====================================
-    # WINDOWS UPDATE
-    # ====================================
+Write-Host "`nAtualizando Windows..." -ForegroundColor Cyan
 
-    Write-Host "`nAtualizando Windows..." -ForegroundColor Cyan
+try {
+    Install-PackageProvider -Name NuGet -Force -ErrorAction SilentlyContinue
+    Install-Module PSWindowsUpdate -Force -ErrorAction SilentlyContinue
+    Import-Module PSWindowsUpdate
 
-    try {
-        Install-PackageProvider -Name NuGet -Force -ErrorAction SilentlyContinue
-        Install-Module PSWindowsUpdate -Force -ErrorAction SilentlyContinue
-        Import-Module PSWindowsUpdate
-
-        Get-WindowsUpdate -Install -AcceptAll -IgnoreReboot
-    } catch {
-        Write-Host "Erro no Windows Update" -ForegroundColor Red
-    }
-
-    # ====================================
-    # FINAL
-    # ====================================
-
-    Write-Host "`n✔ CONFIGURAÇÃO FINALIZADA!" -ForegroundColor Green
-    Write-Host "➡ Agora basta abrir o Office e fazer login com uma conta Microsoft." -ForegroundColor Yellow
-
-    Pause
+    Get-WindowsUpdate -Install -AcceptAll -IgnoreReboot
+}
+catch {
+    Write-Host "Erro no Windows Update" -ForegroundColor Red
 }
 
-# ====================================
-# OPÇÃO 2 - ESPECIFICAÇÕES
-# ====================================
+Write-Host "`n✔ CONFIGURAÇÃO FINALIZADA!" -ForegroundColor Green
+Write-Host "➡ Agora basta abrir o Office e fazer login com uma conta Microsoft." -ForegroundColor Yellow
+
+Pause
+
+}
+
+====================================
+
+OPÇÃO 2 - ESPECIFICAÇÕES
+
+====================================
 
 elseif ($opcao -eq "2") {
 
-    Clear-Host
+Clear-Host
 
-    $os = Get-CimInstance Win32_OperatingSystem
-    $cpu = Get-CimInstance Win32_Processor
-    $ram = Get-CimInstance Win32_PhysicalMemory
-    $gpu = Get-CimInstance Win32_VideoController
+$os = Get-CimInstance Win32_OperatingSystem
+$cpu = Get-CimInstance Win32_Processor
+$ram = Get-CimInstance Win32_PhysicalMemory
+$gpu = Get-CimInstance Win32_VideoController
 
-    $ramTotal = [math]::Round(($os.TotalVisibleMemorySize/1MB),2)
+$ramTotal = [math]::Round(($os.TotalVisibleMemorySize / 1MB), 2)
 
-    Write-Host "===== SISTEMA =====" -ForegroundColor Cyan
-    Write-Host "Nome: $env:COMPUTERNAME"
-    Write-Host "Windows: $($os.Caption)"
-    Write-Host "Versão: $($os.Version)"
+Write-Host "===== SISTEMA =====" -ForegroundColor Cyan
+Write-Host "Nome: $env:COMPUTERNAME"
+Write-Host "Windows: $($os.Caption)"
+Write-Host "Versão: $($os.Version)"
 
-    Write-Host "`n===== HARDWARE =====" -ForegroundColor Cyan
-    Write-Host "CPU: $($cpu.Name)"
-    Write-Host "RAM: $ramTotal GB"
-    Write-Host "Velocidade RAM: $($ram[0].Speed) MHz"
+Write-Host "`n===== HARDWARE =====" -ForegroundColor Cyan
+Write-Host "CPU: $($cpu.Name)"
+Write-Host "RAM: $ramTotal GB"
+Write-Host "Velocidade RAM: $($ram[0].Speed) MHz"
 
-    Write-Host "`n===== GPU =====" -ForegroundColor Cyan
-    Write-Host "$($gpu[0].Name)"
+Write-Host "`n===== GPU =====" -ForegroundColor Cyan
+Write-Host "$($gpu[0].Name)"
 
-    Pause
+Pause
+
 }
 
-# ====================================
-# BACKUP
-# ====================================
+====================================
+
+BACKUP
+
+====================================
 
 elseif ($opcao -eq "3") {
 
-    $destino = Read-Host "Caminho do backup"
+$destino = Read-Host "Caminho do backup"
 
-    if (!(Test-Path $destino)) {
-        New-Item -ItemType Directory -Path $destino | Out-Null
-    }
-
-    $pastas = @("Desktop","Documents","Downloads","Pictures","Videos")
-
-    foreach ($pasta in $pastas) {
-        $origem = Join-Path $env:USERPROFILE $pasta
-        $dest = Join-Path $destino $pasta
-
-        robocopy $origem $dest /E /R:1 /W:1 | Out-Null
-    }
-
-    Write-Host "Backup concluído!" -ForegroundColor Green
-    Pause
+if (!(Test-Path $destino)) {
+    New-Item -ItemType Directory -Path $destino | Out-Null
 }
 
-# ====================================
-# RESTAURAR
-# ====================================
+$pastas = @("Desktop", "Documents", "Downloads", "Pictures", "Videos")
+
+foreach ($pasta in $pastas) {
+    $origem = Join-Path $env:USERPROFILE $pasta
+    $dest = Join-Path $destino $pasta
+
+    robocopy $origem $dest /E /R:1 /W:1 | Out-Null
+}
+
+Write-Host "Backup concluído!" -ForegroundColor Green
+Pause
+
+}
+
+====================================
+
+RESTAURAR
+
+====================================
 
 elseif ($opcao -eq "4") {
 
-    $backup = Read-Host "Caminho do backup"
+$backup = Read-Host "Caminho do backup"
 
-    if (!(Test-Path $backup)) {
-        Write-Host "Pasta não encontrada!" -ForegroundColor Red
-        Pause
-        exit
-    }
-
-    $pastas = Get-ChildItem $backup -Directory
-
-    foreach ($pasta in $pastas) {
-        $destino = Join-Path $env:USERPROFILE $pasta.Name
-        robocopy $pasta.FullName $destino /E /R:1 /W:1 | Out-Null
-    }
-
-    Write-Host "Backup restaurado!" -ForegroundColor Green
+if (!(Test-Path $backup)) {
+    Write-Host "Pasta não encontrada!" -ForegroundColor Red
     Pause
+    exit
 }
 
-# ====================================
-# UPGRADE PRO
-# ====================================
+$pastas = Get-ChildItem $backup -Directory
+
+foreach ($pasta in $pastas) {
+    $destino = Join-Path $env:USERPROFILE $pasta.Name
+    robocopy $pasta.FullName $destino /E /R:1 /W:1 | Out-Null
+}
+
+Write-Host "Backup restaurado!" -ForegroundColor Green
+Pause
+
+}
+
+====================================
+
+OPÇÃO 5 - ATALHOS DOS DEPARTAMENTOS
+
+====================================
 
 elseif ($opcao -eq "5") {
 
-    $os = Get-CimInstance Win32_OperatingSystem
-
-    if ($os.Caption -match "Home") {
-        Write-Host "Atualizando para Pro..." -ForegroundColor Yellow
-        changepk.exe /ProductKey VK7JG-NPHTM-C97JM-9MPGT-3V66T
-    } else {
-        Write-Host "Já é Pro ou não compatível." -ForegroundColor Green
-    }
-
-    Pause
-}
-
-====================================
-ATALHOS DOS DEPARTAMENTOS
-====================================
-
-elseif ($opcao -eq "6") {
-
-Write-Host "`nCriando atalhos..." -ForegroundColor Cyan
+Write-Host "`nCriando atalhos dos Departamentos..." -ForegroundColor Cyan
 
 $DesktopPublico = "$env:PUBLIC\Desktop"
-
 $WshShell = New-Object -ComObject WScript.Shell
 
-# ASN
-$AtalhoASN = $WshShell.CreateShortcut("$DesktopPublico\Departamentos (ASN).lnk")
-$AtalhoASN.TargetPath = "\\SVREP-ASN-001\Departamentos"
-$AtalhoASN.IconLocation = "shell32.dll,3"
-$AtalhoASN.Save()
+try {
 
-# TAG
-$AtalhoTAG = $WshShell.CreateShortcut("$DesktopPublico\Departamentos (Tag).lnk")
-$AtalhoTAG.TargetPath = "\\SVREP-TAG-001\Departamentos"
-$AtalhoTAG.IconLocation = "shell32.dll,3"
-$AtalhoTAG.Save()
+    $AtalhoASN = $WshShell.CreateShortcut("$DesktopPublico\Departamentos (ASN).lnk")
+    $AtalhoASN.TargetPath = "\\SVREP-ASN-001\Departamentos"
+    $AtalhoASN.Save()
 
-Write-Host "Atalhos criados com sucesso!" -ForegroundColor Green
+    $AtalhoTAG = $WshShell.CreateShortcut("$DesktopPublico\Departamentos (Tag).lnk")
+    $AtalhoTAG.TargetPath = "\\SVREP-TAG-001\Departamentos"
+    $AtalhoTAG.Save()
+
+    Write-Host "Atalhos criados com sucesso!" -ForegroundColor Green
+}
+catch {
+    Write-Host "Erro ao criar atalhos!" -ForegroundColor Red
+    Write-Host $_.Exception.Message
+}
+
 Pause
 
 }
