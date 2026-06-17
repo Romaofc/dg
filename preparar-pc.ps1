@@ -215,3 +215,34 @@ elseif ($opcao -eq "5") {
 
     Pause
 }
+
+====================================
+
+ATALHOS DOS DEPARTAMENTOS
+
+====================================
+
+elseif ($opcao -eq "6") {
+
+Write-Host "`nCriando atalhos..." -ForegroundColor Cyan
+
+$DesktopPublico = "$env:PUBLIC\Desktop"
+
+$WshShell = New-Object -ComObject WScript.Shell
+
+# ASN
+$AtalhoASN = $WshShell.CreateShortcut("$DesktopPublico\Departamentos (ASN).lnk")
+$AtalhoASN.TargetPath = "\\SVREP-ASN-001\Departamentos"
+$AtalhoASN.IconLocation = "shell32.dll,3"
+$AtalhoASN.Save()
+
+# TAG
+$AtalhoTAG = $WshShell.CreateShortcut("$DesktopPublico\Departamentos (Tag).lnk")
+$AtalhoTAG.TargetPath = "\\SVREP-TAG-001\Departamentos"
+$AtalhoTAG.IconLocation = "shell32.dll,3"
+$AtalhoTAG.Save()
+
+Write-Host "Atalhos criados com sucesso!" -ForegroundColor Green
+Pause
+
+}
