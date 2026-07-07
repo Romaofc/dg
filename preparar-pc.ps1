@@ -68,12 +68,16 @@ Write-Host "[1] Liberar Espaço" -ForegroundColor White
 Write-Host "[0] Sair" -ForegroundColor White
 Write-Host ""
 
+
+
 function LiberarEspaco {
 
     Clear-Host
 
+    Write-Host $logo -ForegroundColor Cyan
+    Write-Host ""
     Write-Host "==============================================" -ForegroundColor DarkCyan
-    Write-Host "              LIBERAR ESPAÇO" -ForegroundColor Green
+    Write-Host "             LIBERAR ESPAÇO" -ForegroundColor Green
     Write-Host "==============================================" -ForegroundColor DarkCyan
     Write-Host ""
 
@@ -96,21 +100,24 @@ function LiberarEspaco {
     DISM /Online /Cleanup-Image /StartComponentCleanup
 
     Write-Host ""
-    Write-Host "==============================================" -ForegroundColor DarkCyan
-    Write-Host "     LIMPEZA CONCLUÍDA COM SUCESSO!" -ForegroundColor Green
-    Write-Host "==============================================" -ForegroundColor DarkCyan
-    Write-Host ""
-
+    Write-Host "Limpeza concluída!" -ForegroundColor Green
     Pause
 }
 
-do {
+while ($true) {
 
+    Clear-Host
+
+    Write-Host $logo -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "=============== MENU ===============" -ForegroundColor Cyan
+    Write-Host "           TOOLKIT v2.0" -ForegroundColor White
+    Write-Host "==============================================" -ForegroundColor DarkCyan
     Write-Host ""
-    Write-Host "[1] Liberar Espaço" -ForegroundColor White
-    Write-Host "[0] Sair" -ForegroundColor White
+    Write-Host " [1] Liberar Espaço" -ForegroundColor Green
+    Write-Host " [2] Em breve"
+    Write-Host " [3] Em breve"
+    Write-Host " [4] Em breve"
+    Write-Host " [0] Sair" -ForegroundColor Red
     Write-Host ""
 
     $opcao = Read-Host "Escolha uma opção"
@@ -121,15 +128,28 @@ do {
             LiberarEspaco
         }
 
+        "2" {
+            Write-Host "Função em desenvolvimento." -ForegroundColor Yellow
+            Pause
+        }
+
+        "3" {
+            Write-Host "Função em desenvolvimento." -ForegroundColor Yellow
+            Pause
+        }
+
+        "4" {
+            Write-Host "Função em desenvolvimento." -ForegroundColor Yellow
+            Pause
+        }
+
         "0" {
             break
         }
 
         default {
-            Write-Host ""
             Write-Host "Opção inválida!" -ForegroundColor Red
             Start-Sleep 2
         }
     }
-
-} while ($true)
+}
