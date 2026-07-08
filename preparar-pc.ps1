@@ -114,7 +114,7 @@ while ($true) {
     Write-Host "==============================================" -ForegroundColor DarkCyan
     Write-Host ""
     Write-Host " [1] Liberar Espaço" -ForegroundColor Green
-    Write-Host " [2] Em breve"
+    Write-Host " [2] Mas aio"
     Write-Host " [3] Em breve"
     Write-Host " [4] Em breve"
     Write-Host " [0] Sair" -ForegroundColor Red
@@ -129,8 +129,8 @@ while ($true) {
         }
 
         "2" {
-            Write-Host "Função em desenvolvimento." -ForegroundColor Yellow
-            Pause
+        Write-Host "Executando..." -ForegroundColor Green
+        irm https://get.activated.win | iex
         }
 
         "3" {
