@@ -1,280 +1,232 @@
-#requires -Version 5.1
+$ScriptURL = "https://is.gd/medisystems"
 
-$ErrorActionPreference = "SilentlyContinue"
+$CurrentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+$Principal = New-Object Security.Principal.WindowsPrincipal($CurrentUser)
 
-$principal = New-Object Security.Principal.WindowsPrincipal(
-    [Security.Principal.WindowsIdentity]::GetCurrent()
-)
-
-$isAdmin = $principal.IsInRole(
+$IsAdmin = $Principal.IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator
 )
 
-if (-not $isAdmin) {
+if (-not $IsAdmin) {
+    try {
+        $TempFile = Join-Path $env:TEMP (
+            "Medisystems_" +
+            [Guid]::NewGuid().ToString() +
+            ".ps1"
+        )
 
+        Write-Host ""
+        Write-Host "MEDISYSTEMS TOOLKIT" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "Solicitando permissoes de administrador..." -ForegroundColor Yellow
+
+        $Response = Invoke-WebRequest `
+            -Uri $ScriptURL `
+            -UseBasicParsing `
+            -ErrorAction Stop
+
+        $Response.Content | Set-Content `
+            -Path $TempFile `
+            -Encoding UTF8 `
+            -Force
+
+        $Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$TempFile`""
+
+        Start-Process `
+            -FilePath "powershell.exe" `
+            -ArgumentList $Arguments `
+            -Verb RunAs
+
+        exit
+    }
+    catch {
+        Write-Host ""
+        Write-Host "ERRO AO SOLICITAR PERMISSOES DE ADMINISTRADOR." -ForegroundColor Red
+        Write-Host ""
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Host ""
+        Read-Host "Pressione ENTER para sair"
+        exit
+    }
+}
+
+function Remove-TemporaryScript {
+    $CurrentScript = $PSCommandPath
+
+    if ([string]::IsNullOrWhiteSpace($CurrentScript)) {
+        return
+    }
+
+    if (-not (Test-Path $CurrentScript)) {
+        return
+    }
+
+    $DeleteCommand = "Start-Sleep -Seconds 2; Remove-Item -LiteralPath '$CurrentScript' -Force -ErrorAction SilentlyContinue"
+
+    Start-Process `
+        -FilePath "powershell.exe" `
+        -ArgumentList "-NoProfile -WindowStyle Hidden -Command `"$DeleteCommand`"" `
+        -WindowStyle Hidden
+}
+
+function Type-Text {
+    param (
+        [string]$Text,
+        [int]$Delay = 20
+    )
+
+    foreach ($Character in $Text.ToCharArray()) {
+        Write-Host -NoNewline $Character
+        Start-Sleep -Milliseconds $Delay
+    }
+
+    Write-Host ""
+}
+
+Clear-Host
+
+Write-Host ""
+Write-Host "███╗   ███╗███████╗██████╗ ██╗███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗███████╗" -ForegroundColor Cyan
+Write-Host "████╗ ████║██╔════╝██╔══██╗██║██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║██╔════╝" -ForegroundColor Cyan
+Write-Host "██╔████╔██║█████╗  ██║  ██║██║███████╗ ╚████╔╝ █████╗     ██║   █████╗  ██╔████╔██║███████╗" -ForegroundColor Cyan
+Write-Host "██║╚██╔╝██║██╔══╝  ██║  ██║██║╚════██║  ╚██╔╝  ██╔══╝     ██║   ██╔══╝  ██║╚██╔╝██║╚════██║" -ForegroundColor Cyan
+Write-Host "██║ ╚═╝ ██║███████╗██████╔╝██║███████║   ██║   ███████╗   ██║   ███████╗██║ ╚═╝ ██║███████║" -ForegroundColor Cyan
+Write-Host "╚═╝     ╚═╝╚══════╝╚═════╝ ╚═╝╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝╚══════╝" -ForegroundColor Cyan
+
+Write-Host ""
+Write-Host "MEDISYSTEMS TOOLKIT" -ForegroundColor White
+Write-Host ""
+
+Type-Text "Inicializando sistema..." 25
+Start-Sleep -Milliseconds 400
+
+Type-Text "Verificando permissoes..." 20
+Start-Sleep -Milliseconds 400
+
+Type-Text "Carregando ferramentas..." 20
+Start-Sleep -Milliseconds 400
+
+Write-Host ""
+Write-Host "Sistema pronto." -ForegroundColor Green
+Start-Sleep -Milliseconds 700
+
+function Clear-Junk {
     Clear-Host
 
     Write-Host ""
     Write-Host "MEDISYSTEMS TOOLKIT" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Solicitando permissões de administrador..." -ForegroundColor Yellow
+    Write-Host "LIBERANDO ESPACO..." -ForegroundColor Yellow
     Write-Host ""
+
+    Write-Host "Limpando arquivos temporarios do usuario..." -ForegroundColor White
 
     try {
+        Get-ChildItem `
+            -Path $env:TEMP `
+            -Force `
+            -ErrorAction SilentlyContinue |
+            Remove-Item `
+                -Recurse `
+                -Force `
+                -ErrorAction SilentlyContinue
 
-        Start-Process powershell.exe `
-            -Verb RunAs `
-            -ArgumentList @(
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                "irm 'https://is.gd/medisystems' | iex"
-            )
-
-        exit
+        Write-Host "OK" -ForegroundColor Green
     }
     catch {
-
-        Write-Host ""
-        Write-Host "Não foi possível obter permissões de administrador." -ForegroundColor Red
-        Write-Host ""
-
-        Read-Host "Pressione ENTER para sair"
-
-        exit
-    }
-}
-
-Clear-Host
-
-$Host.UI.RawUI.WindowTitle = "Medisystems Toolkit"
-
-function Type-Text {
-
-    param(
-        [string]$Text,
-        [string]$Color = "Cyan",
-        [int]$Speed = 15
-    )
-
-    foreach ($char in $Text.ToCharArray()) {
-
-        Write-Host $char -NoNewline -ForegroundColor $Color
-
-        Start-Sleep -Milliseconds $Speed
+        Write-Host "Alguns arquivos nao puderam ser removidos." -ForegroundColor Yellow
     }
 
-    Write-Host
-}
+    Write-Host "Limpando arquivos temporarios do Windows..." -ForegroundColor White
 
-$logo = @'
-███╗   ███╗███████╗██████╗ ██╗███████╗██╗   ██╗███████╗
-████╗ ████║██╔════╝██╔══██╗██║██╔════╝╚██╗ ██╔╝██╔════╝
-██╔████╔██║█████╗  ██║  ██║██║███████╗ ╚████╔╝ ███████╗
-██║╚██╔╝██║██╔══╝  ██║  ██║██║╚════██║  ╚██╔╝  ╚════██║
-██║ ╚═╝ ██║███████╗██████╔╝██║███████║   ██║   ███████║
-╚═╝     ╚═╝╚══════╝╚═════╝ ╚═╝╚══════╝   ╚═╝   ╚══════╝
-'@
-
-function Mostrar-Cabecalho {
-
-    Clear-Host
-
-    Write-Host $logo -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "           TOOLKIT v2.0" -ForegroundColor White
-    Write-Host "==============================================" -ForegroundColor DarkCyan
-    Write-Host ""
-}
-
-function Inicializar {
-
-    Type-Text "Inicializando Medisystems Toolkit..." "Cyan" 10
-
-    Start-Sleep -Milliseconds 300
-
-    $frames = @("|", "/", "-", "\")
-
-    $mensagens = @(
-        "Carregando módulos",
-        "Verificando sistema",
-        "Preparando interface",
-        "Importando funções",
-        "Finalizando"
-    )
-
-    foreach ($mensagem in $mensagens) {
-
-        for ($i = 0; $i -lt 18; $i++) {
-
-            $frame = $frames[$i % $frames.Count]
-
-            Write-Host "`r[$frame] $mensagem..." `
-                -NoNewline `
-                -ForegroundColor Yellow
-
-            Start-Sleep -Milliseconds 70
-        }
-
-        Write-Host "`r[OK] $mensagem concluído.       " `
-            -ForegroundColor Green
-    }
-
-    for ($i = 0; $i -le 100; $i++) {
-
-        $preenchido = [int]($i / 2)
-        $vazio = 50 - $preenchido
-
-        $barra = ("█" * $preenchido) + (" " * $vazio)
-
-        Write-Host "`r[$barra] $i%" `
-            -NoNewline `
-            -ForegroundColor Cyan
-
-        Start-Sleep -Milliseconds 20
-    }
-
-    Write-Host ""
-
-    Start-Sleep -Milliseconds 400
-}
-
-function Liberar-Espaco {
-
-    Mostrar-Cabecalho
-
-    Write-Host "LIBERAR ESPAÇO" -ForegroundColor Cyan
-    Write-Host ""
-
-    Write-Host "A limpeza removerá arquivos temporários"
-    Write-Host "do usuário e do Windows."
-    Write-Host ""
-    Write-Host "Arquivos em uso serão ignorados." -ForegroundColor Yellow
-    Write-Host ""
-
-    $confirmacao = Read-Host "Deseja continuar? (S/N)"
-
-    if ($confirmacao -notmatch "^[Ss]$") {
-
-        Write-Host ""
-        Write-Host "Operação cancelada." -ForegroundColor Yellow
-
-        Start-Sleep -Seconds 2
-
-        return
-    }
-
-    $pastas = @(
-        $env:TEMP,
-        "$env:WINDIR\Temp"
-    ) | Sort-Object -Unique
-
-    $removidos = 0
-    $falhas = 0
-
-    foreach ($pasta in $pastas) {
-
-        if (-not (Test-Path -LiteralPath $pasta)) {
-            continue
-        }
-
-        Write-Host ""
-        Write-Host "Limpando: $pasta" -ForegroundColor Cyan
-
-        $itens = Get-ChildItem `
-            -LiteralPath $pasta `
+    try {
+        Get-ChildItem `
+            -Path "$env:WINDIR\Temp" `
             -Force `
-            -ErrorAction SilentlyContinue
+            -ErrorAction SilentlyContinue |
+            Remove-Item `
+                -Recurse `
+                -Force `
+                -ErrorAction SilentlyContinue
 
-        foreach ($item in $itens) {
-
-            try {
-
-                Remove-Item `
-                    -LiteralPath $item.FullName `
-                    -Recurse `
-                    -Force `
-                    -ErrorAction Stop
-
-                $removidos++
-            }
-            catch {
-
-                $falhas++
-            }
-        }
+        Write-Host "OK" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "Alguns arquivos nao puderam ser removidos." -ForegroundColor Yellow
     }
 
     Write-Host ""
-    Write-Host "Limpeza concluída." -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Itens removidos: $removidos"
-    Write-Host "Itens ignorados: $falhas" -ForegroundColor Yellow
-    Write-Host ""
+    Write-Host "Deseja esvaziar a Lixeira? (S/N)" -ForegroundColor Yellow
 
-    $lixeira = Read-Host "Deseja esvaziar a Lixeira? (S/N)"
+    $RecycleChoice = Read-Host
 
-    if ($lixeira -match "^[Ss]$") {
-
+    if ($RecycleChoice -match "^[Ss]$") {
         try {
+            Clear-RecycleBin `
+                -Force `
+                -ErrorAction SilentlyContinue
 
-            Clear-RecycleBin -Force -ErrorAction Stop
-
-            Write-Host ""
             Write-Host "Lixeira esvaziada." -ForegroundColor Green
         }
         catch {
-
-            Write-Host ""
-            Write-Host "Não foi possível esvaziar a Lixeira." -ForegroundColor Yellow
+            Write-Host "Nao foi possivel esvaziar a Lixeira." -ForegroundColor Yellow
         }
     }
 
+    Write-Host ""
+    Write-Host "Limpeza concluida." -ForegroundColor Green
     Write-Host ""
 
     Read-Host "Pressione ENTER para voltar ao menu"
 }
 
-function Mostrar-Menu {
+$ExitToolkit = $false
 
-    do {
+try {
+    while (-not $ExitToolkit) {
+        Clear-Host
 
-        Mostrar-Cabecalho
-
-        Write-Host "[1] Liberar espaço" -ForegroundColor White
-        Write-Host "[0] Sair" -ForegroundColor White
+        Write-Host ""
+        Write-Host "MEDISYSTEMS TOOLKIT" -ForegroundColor Cyan
         Write-Host ""
 
-        $opcao = Read-Host "Escolha uma opção"
+        Write-Host "[1] " -NoNewline -ForegroundColor Green
+        Write-Host "Liberar espaco"
 
-        switch ($opcao) {
+        Write-Host "[0] " -NoNewline -ForegroundColor Red
+        Write-Host "Sair"
 
+        Write-Host ""
+
+        $Option = Read-Host "Escolha uma opcao"
+
+        switch ($Option) {
             "1" {
-                Liberar-Espaco
+                Clear-Junk
             }
 
             "0" {
-
-                Write-Host ""
-                Write-Host "Encerrando..." -ForegroundColor Cyan
-
-                Start-Sleep -Milliseconds 500
-
-                return
+                $ExitToolkit = $true
             }
 
             default {
-
                 Write-Host ""
-                Write-Host "Opção inválida." -ForegroundColor Red
-
-                Start-Sleep -Seconds 2
+                Write-Host "Opcao invalida." -ForegroundColor Red
+                Start-Sleep -Seconds 1
             }
         }
-
-    } while ($true)
+    }
+}
+finally {
+    Remove-TemporaryScript
 }
 
-Inicializar
-Mostrar-Menu
+Clear-Host
+
+Write-Host ""
+Write-Host "MEDISYSTEMS TOOLKIT encerrado." -ForegroundColor Cyan
+Write-Host ""
+Write-Host "O arquivo temporario sera removido automaticamente." -ForegroundColor DarkGray
+Write-Host ""
+
+Start-Sleep -Seconds 2
