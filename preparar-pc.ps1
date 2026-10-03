@@ -1,10 +1,32 @@
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+#requires -Version 5.1
 
-    Start-Process powershell.exe -Verb RunAs -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`""
+# Solicita execução como administrador
+$principal = New-Object Security.Principal.WindowsPrincipal(
+    [Security.Principal.WindowsIdentity]::GetCurrent()
+)
+
+if (-not $principal.IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator
+)) {
+    if ([string]::IsNullOrWhiteSpace($PSCommandPath)) {
+        Write-Host "Salve o script como arquivo .ps1 antes de executá-lo." `
+            -ForegroundColor Red
+        Read-Host "Pressione ENTER para sair"
+        exit
+    }
+
+    Start-Process powershell.exe `
+        -Verb RunAs `
+        -ArgumentList @(
+            "-NoProfile",
+            "-ExecutionPolicy", "Bypass",
+            "-File", "`"$PSCommandPath`""
+        )
+
+    exit
 }
 
 Clear-Host
-
 $Host.UI.RawUI.WindowTitle = "Medisystems Toolkit"
 
 function Type-Text {
@@ -14,46 +36,13 @@ function Type-Text {
         [int]$Speed = 15
     )
 
-    foreach ($c in $Text.ToCharArray()) {
-        Write-Host $c -NoNewline -ForegroundColor $Color
+    foreach ($char in $Text.ToCharArray()) {
+        Write-Host $char -NoNewline -ForegroundColor $Color
         Start-Sleep -Milliseconds $Speed
     }
+
     Write-Host
 }
-
-# Tela inicial
-Type-Text "Inicializando Medisystems Toolkit..." "Cyan" 10
-Start-Sleep -Milliseconds 300
-
-$frames = @("|","/","-","\")
-$mensagens = @(
-    "Carregando módulos",
-    "Verificando sistema",
-    "Preparando interface",
-    "Importando funções",
-    "Finalizando"
-)
-
-foreach ($msg in $mensagens) {
-    for ($i=0; $i -lt 18; $i++) {
-        $frame = $frames[$i % $frames.Count]
-        Write-Host "`r[$frame] $msg..." -NoNewline -ForegroundColor Yellow
-        Start-Sleep -Milliseconds 70
-    }
-    Write-Host "`r[✔] $msg concluído.      " -ForegroundColor Green
-}
-
-Write-Host
-
-for ($i=0; $i -le 100; $i++) {
-    $bars = "█" * ($i/2)
-    $spaces = " " * (50 - ($i/2))
-    Write-Host "`r[$bars$spaces] $i%" -NoNewline -ForegroundColor Cyan
-    Start-Sleep -Milliseconds 20
-}
-
-Start-Sleep -Milliseconds 400
-Clear-Host
 
 $logo = @'
 ███╗   ███╗███████╗██████╗ ██╗███████╗██╗   ██╗███████╗
@@ -64,97 +53,159 @@ $logo = @'
 ╚═╝     ╚═╝╚══════╝╚═════╝ ╚═╝╚══════╝   ╚═╝   ╚══════╝
 '@
 
-Write-Host $logo -ForegroundColor Cyan
-Write-Host ""
-Write-Host "           TOOLKIT v2.0" -ForegroundColor White
-Write-Host "==============================================" -ForegroundColor DarkCyan
-Write-Host ""
-Write-Host "[1] Liberar Espaço" -ForegroundColor White
-Write-Host "[0] Sair" -ForegroundColor White
-Write-Host ""
-
-
-
-function LiberarEspaco {
-
+function Mostrar-Cabecalho {
     Clear-Host
-
-    Write-Host $logo -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "==============================================" -ForegroundColor DarkCyan
-    Write-Host "             LIBERAR ESPAÇO" -ForegroundColor Green
-    Write-Host "==============================================" -ForegroundColor DarkCyan
-    Write-Host ""
-
-    Write-Host "[1/5] Limpando arquivos temporários..." -ForegroundColor Yellow
-    Remove-Item "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
-
-    Write-Host "[2/5] Esvaziando a Lixeira..." -ForegroundColor Yellow
-    Clear-RecycleBin -Force -ErrorAction SilentlyContinue
-
-    Write-Host "[3/5] Limpando cache de miniaturas..." -ForegroundColor Yellow
-    Remove-Item "$env:LOCALAPPDATA\Microsoft\Windows\Explorer\thumbcache_*" -Force -ErrorAction SilentlyContinue
-
-    Write-Host "[4/5] Limpando cache do Windows Update..." -ForegroundColor Yellow
-    Stop-Service wuauserv -Force -ErrorAction SilentlyContinue
-    Remove-Item "C:\Windows\SoftwareDistribution\Download\*" -Recurse -Force -ErrorAction SilentlyContinue
-    Start-Service wuauserv -ErrorAction SilentlyContinue
-
-    Write-Host "[5/5] Otimizando componentes do Windows..." -ForegroundColor Yellow
-    DISM /Online /Cleanup-Image /StartComponentCleanup
-
-    Write-Host ""
-    Write-Host "Limpeza concluída!" -ForegroundColor Green
-    Pause
-}
-
-while ($true) {
-
-    Clear-Host
-
     Write-Host $logo -ForegroundColor Cyan
     Write-Host ""
     Write-Host "           TOOLKIT v2.0" -ForegroundColor White
-    Write-Host "==============================================" -ForegroundColor DarkCyan
+    Write-Host "==============================================" `
+        -ForegroundColor DarkCyan
     Write-Host ""
-    Write-Host " [1] Liberar Espaço" -ForegroundColor Green
-    Write-Host " [2] Mas aio"
-    Write-Host " [3] Em breve"
-    Write-Host " [4] Em breve"
-    Write-Host " [0] Sair" -ForegroundColor Red
+}
+
+function Inicializar {
+    Type-Text "Inicializando Medisystems Toolkit..." "Cyan" 10
+    Start-Sleep -Milliseconds 300
+
+    $frames = @("|", "/", "-", "\")
+    $mensagens = @(
+        "Carregando módulos",
+        "Verificando sistema",
+        "Preparando interface",
+        "Importando funções",
+        "Finalizando"
+    )
+
+    foreach ($mensagem in $mensagens) {
+        for ($i = 0; $i -lt 18; $i++) {
+            $frame = $frames[$i % $frames.Count]
+
+            Write-Host "`r[$frame] $mensagem..." `
+                -NoNewline `
+                -ForegroundColor Yellow
+
+            Start-Sleep -Milliseconds 70
+        }
+
+        Write-Host "`r[OK] $mensagem concluído.       " `
+            -ForegroundColor Green
+    }
+
+    for ($i = 0; $i -le 100; $i++) {
+        $preenchido = [int]($i / 2)
+        $vazio = 50 - $preenchido
+
+        $barra = ("█" * $preenchido) + (" " * $vazio)
+
+        Write-Host "`r[$barra] $i%" `
+            -NoNewline `
+            -ForegroundColor Cyan
+
+        Start-Sleep -Milliseconds 20
+    }
+
+    Write-Host
+    Start-Sleep -Milliseconds 400
+}
+
+function Liberar-Espaco {
+    Mostrar-Cabecalho
+
+    Write-Host "A limpeza removerá arquivos temporários do usuário e do Windows."
+    Write-Host "Arquivos em uso serão ignorados." -ForegroundColor Yellow
     Write-Host ""
 
-    $opcao = Read-Host "Escolha uma opção"
+    $confirmacao = Read-Host "Deseja continuar? (S/N)"
 
-    switch ($opcao) {
+    if ($confirmacao -notmatch "^[Ss]$") {
+        Write-Host "Operação cancelada." -ForegroundColor Yellow
+        Start-Sleep -Seconds 2
+        return
+    }
 
-        "1" {
-            LiberarEspaco
+    $pastas = @(
+        $env:TEMP,
+        "$env:WINDIR\Temp"
+    ) | Sort-Object -Unique
+
+    $removidos = 0
+    $falhas = 0
+
+    foreach ($pasta in $pastas) {
+        if (-not (Test-Path -LiteralPath $pasta)) {
+            continue
         }
 
-        "2" {
-        Write-Host "Executando..." -ForegroundColor Green
-        irm https://get.activated.win | iex
-        }
+        Write-Host "Limpando: $pasta" -ForegroundColor Cyan
 
-        "3" {
-            Write-Host "Função em desenvolvimento." -ForegroundColor Yellow
-            Pause
-        }
+        $itens = Get-ChildItem -LiteralPath $pasta `
+            -Force `
+            -ErrorAction SilentlyContinue
 
-        "4" {
-            Write-Host "Função em desenvolvimento." -ForegroundColor Yellow
-            Pause
-        }
+        foreach ($item in $itens) {
+            try {
+                Remove-Item -LiteralPath $item.FullName `
+                    -Recurse `
+                    -Force `
+                    -ErrorAction Stop
 
-        "0" {
-            break
-        }
-
-        default {
-            Write-Host "Opção inválida!" -ForegroundColor Red
-            Start-Sleep 2
+                $removidos++
+            }
+            catch {
+                $falhas++
+            }
         }
     }
+
+    Write-Host ""
+    Write-Host "Limpeza concluída." -ForegroundColor Green
+    Write-Host "Itens removidos: $removidos"
+    Write-Host "Itens ignorados: $falhas" -ForegroundColor Yellow
+
+    $lixeira = Read-Host "Deseja esvaziar a Lixeira? (S/N)"
+
+    if ($lixeira -match "^[Ss]$") {
+        try {
+            Clear-RecycleBin -Force -ErrorAction Stop
+            Write-Host "Lixeira esvaziada." -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Não foi possível esvaziar a Lixeira." `
+                -ForegroundColor Yellow
+        }
+    }
+
+    Read-Host "Pressione ENTER para voltar ao menu"
 }
+
+function Mostrar-Menu {
+    do {
+        Mostrar-Cabecalho
+
+        Write-Host "[1] Liberar espaço" -ForegroundColor White
+        Write-Host "[0] Sair" -ForegroundColor White
+        Write-Host ""
+
+        $opcao = Read-Host "Escolha uma opção"
+
+        switch ($opcao) {
+            "1" {
+                Liberar-Espaco
+            }
+
+            "0" {
+                Write-Host "Encerrando..." -ForegroundColor Cyan
+                return
+            }
+
+            default {
+                Write-Host "Opção inválida." -ForegroundColor Red
+                Start-Sleep -Seconds 2
+            }
+        }
+    }
+    while ($true)
+}
+
+Inicializar
+Mostrar-Menu
